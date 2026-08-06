@@ -78,17 +78,22 @@ export default function AIScreen() {
           staff_data: null
         };
 
+        let activeIntents = [];
+
         // Software checks for multiple keywords simultaneously (Multi-Intent Support)
         if (lowerQuery.includes('sales') || lowerQuery.includes('order') || lowerQuery.includes('bikri')) {
-          fetchedDataPacket.sales_data = { status: 'Fetched orders table securely via software' };
+          fetchedDataPacket.sales_data = { status: 'Fetched orders table securely via software', recordsCount: 12, totalValue: 45000 };
+          activeIntents.push('Sales/Orders');
         }
 
         if (lowerQuery.includes('stock') || lowerQuery.includes('inventory') || lowerQuery.includes('maal')) {
-          fetchedDataPacket.inventory_data = { status: 'Fetched inventory stocks table securely via software' };
+          fetchedDataPacket.inventory_data = { status: 'Fetched inventory stocks table securely via software', lowStockItems: 3 };
+          activeIntents.push('Inventory/Stock');
         }
 
         if (lowerQuery.includes('employee') || lowerQuery.includes('staff') || lowerQuery.includes('report')) {
-          fetchedDataPacket.staff_data = { status: 'Fetched staff profiles table securely via software' };
+          fetchedDataPacket.staff_data = { status: 'Fetched staff profiles table securely via software', activeStaff: 5 };
+          activeIntents.push('Staff Report');
         }
 
         // Build Mega-Rich Payload for Steve (Zero DB access for AI Agent)
@@ -102,19 +107,51 @@ export default function AIScreen() {
           timestamp: new Date().toISOString()
         };
 
-        console.log('Secure Mega-Rich Payload Sent to Steve:', megaRichPayload);
+        console.log('Secure Mega-Rich Payload Built:', megaRichPayload);
 
-        // Simulating response after software fetches data locally and sends payload
+        // ATTEMPT TO SEND TO STEVE WEBHOOK WITH FALLBACK HANDLER
+        let aiResponseText = '';
+        let webhookSuccess = false;
+
+        try {
+          // Real or simulated webhook call to Steve (n8n)
+          // const res = await fetch('/api/webhook/steve', {
+          //   method: 'POST',
+          //   headers: { 'Content-Type': 'application/json' },
+          //   body: JSON.stringify(megaRichPayload)
+          // });
+          // if (res.ok) {
+          //   const data = await res.json();
+          //   aiResponseText = data.response;
+          //   webhookSuccess = true;
+          // }
+
+          // Simulating a mock network check (For testing fallback, you can force catch)
+          throw new Error('Steve Webhook Temporarily Unavailable (Simulated Fallback Test)');
+
+        } catch (webhookError) {
+          console.warn('Steve is unavailable. Triggering Local Software Fallback Engine...', webhookError.message);
+          
+          // ==========================================
+          // LOCAL SOFTWARE FALLBACK RESPONSE GENERATOR
+          // ==========================================
+          webhookSuccess = false;
+          const intentSummary = activeIntents.length > 0 ? activeIntents.join(', ') : 'General Business Query';
+          
+          aiResponseText = `[Fallback Mode Active]: Steve (AI Agent) is currently unreachable. However, the software successfully extracted your requested data locally for [${intentSummary}]. Currency formatted in ${userSession.currency}. All database queries executed securely under your tenant boundary.`;
+        }
+
+        // Display Response to UI
         setTimeout(() => {
           setMessages((prev) => [
             ...prev,
             { 
               sender: 'ai', 
-              text: `Command processed successfully! Software parsed your request, fetched multi-intent database tables in parallel, formatted currency in [${userSession.currency}], and packaged the payload for Steve without exposing direct database access.` 
+              text: aiResponseText 
             }
           ]);
           setLoading(false);
-        }, 1200);
+        }, 1000);
       }
 
     } catch (error) {
@@ -123,7 +160,7 @@ export default function AIScreen() {
     }
   };
 
-  if (loading) {
+  if (loading && messages.length === 0) {
     return <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">Loading Universal AI-Screen...</div>;
   }
 
@@ -135,21 +172,21 @@ export default function AIScreen() {
         <div className="pb-4 border-b border-slate-800 mb-4 flex justify-between items-center">
           <div>
             <h1 className="text-lg font-bold tracking-tight text-blue-400">
-              {userSession.role === 'super_admin' ? 'SJ 32Core ERP - Global Super Admin AI-Screen' : `SJ 32Core ERP - ${userSession.companyName} AI-Screen`}
+              {userSession?.role === 'super_admin' ? 'SJ 32Core ERP - Global Super Admin AI-Screen' : `SJ 32Core ERP - ${userSession?.companyName} AI-Screen`}
             </h1>
             <p className="text-[11px] text-slate-400">
-              Email: <span className="text-blue-300">{userSession.email}</span> | Role: <span className="text-amber-400 uppercase font-semibold">{userSession.role}</span>
+              Email: <span className="text-blue-300">{userSession?.email}</span> | Role: <span className="text-amber-400 uppercase font-semibold">{userSession?.role}</span>
             </p>
           </div>
           
           <div className="flex gap-2">
-            {userSession.role === 'super_admin' ? (
+            {userSession?.role === 'super_admin' ? (
               <span className="text-xs bg-purple-950 text-purple-300 px-3 py-1 rounded-full border border-purple-500/30">
                 Global Control Active
               </span>
             ) : (
               <span className="text-xs bg-emerald-950 text-emerald-300 px-3 py-1 rounded-full border border-emerald-500/30">
-                Currency: {userSession.currency}
+                Currency: {userSession?.currency}
               </span>
             )}
           </div>
@@ -162,7 +199,9 @@ export default function AIScreen() {
               <div className={`max-w-[85%] rounded-xl p-3.5 text-sm ${
                 msg.sender === 'user' 
                   ? 'bg-blue-600 text-white rounded-br-none' 
-                  : 'bg-slate-800 border border-slate-700 text-slate-200 rounded-bl-none'
+                  : msg.text.includes('Fallback Mode')
+                    ? 'bg-amber-950/70 border border-amber-500/40 text-amber-200 rounded-bl-none'
+                    : 'bg-slate-800 border border-slate-700 text-slate-200 rounded-bl-none'
               }`}>
                 {msg.text}
               </div>
@@ -171,7 +210,7 @@ export default function AIScreen() {
           {loading && (
             <div className="flex justify-start">
               <div className="bg-slate-800 border border-slate-700 text-slate-400 text-xs rounded-xl p-3 animate-pulse">
-                Universal engine validating email, parsing multi-intent query & fetching parallel data...
+                Universal engine validating email, parsing multi-intent query, and checking webhook availability...
               </div>
             </div>
           )}
@@ -183,7 +222,7 @@ export default function AIScreen() {
             type="text" 
             value={inputQuery}
             onChange={(e) => setInputQuery(e.target.value)}
-            placeholder={userSession.role === 'super_admin' ? "Type global system command..." : "Type multi-intent command in any language (e.g. show sales, stock, and reports)..."} 
+            placeholder={userSession?.role === 'super_admin' ? "Type global system command..." : "Type multi-intent command in any language (e.g. show sales, stock, and reports)..."} 
             className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 text-sm"
           />
           <button 
@@ -196,11 +235,11 @@ export default function AIScreen() {
         </form>
 
         <div className="mt-3 text-center text-[10px] text-slate-500">
-          Universal Email Routing | Zero Database Access for AI | Multi-Language & Multi-Currency Engine
+          Universal Email Routing | Zero Database Access for AI | Automated Webhook Fallback Engine
         </div>
 
       </div>
     </main>
   );
-        }
+          }
 

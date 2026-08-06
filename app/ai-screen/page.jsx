@@ -1,245 +1,115 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
-export default function AIScreen() {
-  const [loading, setLoading] = useState(true);
-  const [userSession, setUserSession] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [inputQuery, setInputQuery] = useState('');
+export default function AIScreenComponent() {
+  const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [responseLog, setResponseLog] = useState(null);
 
-  // UNIVERSAL EMAIL & ROLE DETECTION ON LOGIN
-  useEffect(() => {
-    // In production, this comes from Supabase auth session: supabase.auth.getUser()
-    const currentUserEmail = 'admin@sj32core.com'; // Change to test Tenant Owner email e.g. 'owner@sjcraft.com'
-    const superAdminEmail = 'admin@sj32core.com';
-
-    if (currentUserEmail === superAdminEmail) {
-      setUserSession({
-        email: currentUserEmail,
-        role: 'super_admin',
-        name: 'Supreme Platform Owner'
-      });
-      setMessages([
-        { 
-          sender: 'ai', 
-          text: 'SJ 32Core ERP Universal AI-Screen Active (Super Admin Mode). Managing global platforms, active tenant nodes, pricing tiers (Trial, Starter, Business, Bronze, Silver, Gold, Enterprise), and AI token quotas.' 
-        }
-      ]);
-    } else {
-      setUserSession({
-        email: currentUserEmail,
-        role: 'company_owner',
-        companyName: 'SJ Craft Resin Art',
-        currency: 'PKR',
-        language: 'en'
-      });
-      setMessages([
-        { 
-          sender: 'ai', 
-          text: 'SJ 32Core ERP Universal AI-Screen Active (Business OS Mode). Type complex multi-intent commands in any language (e.g., "Show sales, check inventory, and staff report").' 
-        }
-      ]);
-    }
-    setLoading(false);
-  }, []);
-
-  const handleSendMessage = async (e) => {
+  const handleAISubmit = async (e) => {
     e.preventDefault();
-    if (!inputQuery.trim()) return;
+    if (!query.trim()) return;
 
-    const userText = inputQuery;
-    setInputQuery('');
-    
-    // 1. Add user command to chat UI
-    setMessages((prev) => [...prev, { sender: 'user', text: userText }]);
     setLoading(true);
-
     try {
-      if (userSession.role === 'super_admin') {
-        // Super Admin Global Processing Logic
-        setTimeout(() => {
-          setMessages((prev) => [
-            ...prev,
-            { 
-              sender: 'ai', 
-              text: `Global Platform Command Executed: Successfully processed administrative parameters and tenant distribution quotas for: "${userText}"` 
-            }
-          ]);
-          setLoading(false);
-        }, 1000);
-
-      } else {
-        // Tenant Business OS: Multi-Intent Parsing & Software-Side Data Extraction
-        const lowerQuery = userText.toLowerCase();
-        let fetchedDataPacket = {
-          sales_data: null,
-          inventory_data: null,
-          staff_data: null
-        };
-
-        let activeIntents = [];
-
-        // Software checks for multiple keywords simultaneously (Multi-Intent Support)
-        if (lowerQuery.includes('sales') || lowerQuery.includes('order') || lowerQuery.includes('bikri')) {
-          fetchedDataPacket.sales_data = { status: 'Fetched orders table securely via software', recordsCount: 12, totalValue: 45000 };
-          activeIntents.push('Sales/Orders');
-        }
-
-        if (lowerQuery.includes('stock') || lowerQuery.includes('inventory') || lowerQuery.includes('maal')) {
-          fetchedDataPacket.inventory_data = { status: 'Fetched inventory stocks table securely via software', lowStockItems: 3 };
-          activeIntents.push('Inventory/Stock');
-        }
-
-        if (lowerQuery.includes('employee') || lowerQuery.includes('staff') || lowerQuery.includes('report')) {
-          fetchedDataPacket.staff_data = { status: 'Fetched staff profiles table securely via software', activeStaff: 5 };
-          activeIntents.push('Staff Report');
-        }
-
-        // Build Mega-Rich Payload for Steve (Zero DB access for AI Agent)
-        const megaRichPayload = {
-          tenant_id: userSession.companyName,
-          user_role: userSession.role,
-          user_command: userText,
-          tenant_currency: userSession.currency,
-          detected_language: userSession.language,
-          software_extracted_data: fetchedDataPacket,
-          timestamp: new Date().toISOString()
-        };
-
-        console.log('Secure Mega-Rich Payload Built:', megaRichPayload);
-
-        // ATTEMPT TO SEND TO STEVE WEBHOOK WITH FALLBACK HANDLER
-        let aiResponseText = '';
-        let webhookSuccess = false;
-
-        try {
-          // Real or simulated webhook call to Steve (n8n)
-          // const res = await fetch('/api/webhook/steve', {
-          //   method: 'POST',
-          //   headers: { 'Content-Type': 'application/json' },
-          //   body: JSON.stringify(megaRichPayload)
-          // });
-          // if (res.ok) {
-          //   const data = await res.json();
-          //   aiResponseText = data.response;
-          //   webhookSuccess = true;
-          // }
-
-          // Simulating a mock network check (For testing fallback, you can force catch)
-          throw new Error('Steve Webhook Temporarily Unavailable (Simulated Fallback Test)');
-
-        } catch (webhookError) {
-          console.warn('Steve is unavailable. Triggering Local Software Fallback Engine...', webhookError.message);
-          
-          // ==========================================
-          // LOCAL SOFTWARE FALLBACK RESPONSE GENERATOR
-          // ==========================================
-          webhookSuccess = false;
-          const intentSummary = activeIntents.length > 0 ? activeIntents.join(', ') : 'General Business Query';
-          
-          aiResponseText = `[Fallback Mode Active]: Steve (AI Agent) is currently unreachable. However, the software successfully extracted your requested data locally for [${intentSummary}]. Currency formatted in ${userSession.currency}. All database queries executed securely under your tenant boundary.`;
-        }
-
-        // Display Response to UI
-        setTimeout(() => {
-          setMessages((prev) => [
-            ...prev,
-            { 
-              sender: 'ai', 
-              text: aiResponseText 
-            }
-          ]);
-          setLoading(false);
-        }, 1000);
+      // 1. Get current authenticated user session from Supabase
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        alert('Unauthorized: Please login first.');
+        setLoading(false);
+        return;
       }
 
-    } catch (error) {
+      const userEmail = session.user.email;
+      const isSuperAdmin = userEmail === 'ja024478@gmail.com';
+
+      // 2. Fetch user profile / tenant mapping from Supabase database
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('tenant_id, role, staff_id')
+        .eq('id', session.user.id)
+        .single();
+
+      // 3. Build rich context payload for Steve (n8n Webhook)
+      const userContext = {
+        userId: session.user.id,
+        email: userEmail,
+        role: isSuperAdmin ? 'super_admin' : (profileData?.role || 'company_owner'),
+        tenantId: isSuperAdmin ? 'GLOBAL_SUPER_ADMIN_TENANT' : (profileData?.tenant_id || null),
+        staffId: profileData?.staff_id || 'SA-001',
+        permissions: isSuperAdmin ? ['ALL_ENGINES_ACCESS'] : ['TENANT_SCOPED_ACCESS']
+      };
+
+      const webhookPayload = {
+        eventType: 'AI_QUERY_SUBMITTED',
+        tenantId: userContext.tenantId,
+        userContext: userContext,
+        payload: {
+          userQuery: query,
+          timestamp: new Date().toISOString()
+        }
+      };
+
+      // 4. Send request to our backend webhook route (/api/webhook/steve)
+      const res = await fetch('/api/webhook/steve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Agar aapne webhook secret lagaya hai toh yahan pass kar sakte hain
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_STEVE_WEBHOOK_SECRET || ''}` 
+        },
+        body: JSON.stringify(webhookPayload)
+      });
+
+      const result = await res.json();
+      setResponseLog(result);
+
+    } catch (err) {
+      console.error('AI Screen Error:', err);
+      setResponseLog({ success: false, error: err.message });
+    } finally {
       setLoading(false);
-      setMessages((prev) => [...prev, { sender: 'ai', text: 'Error executing command: ' + error.message }]);
     }
   };
 
-  if (loading && messages.length === 0) {
-    return <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">Loading Universal AI-Screen...</div>;
-  }
-
   return (
-    <main className="min-h-screen bg-slate-950 flex items-center justify-center p-4 text-white">
-      <div className="max-w-3xl w-full bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl flex flex-col h-[85vh]">
-        
-        {/* Universal Header */}
-        <div className="pb-4 border-b border-slate-800 mb-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-lg font-bold tracking-tight text-blue-400">
-              {userSession?.role === 'super_admin' ? 'SJ 32Core ERP - Global Super Admin AI-Screen' : `SJ 32Core ERP - ${userSession?.companyName} AI-Screen`}
-            </h1>
-            <p className="text-[11px] text-slate-400">
-              Email: <span className="text-blue-300">{userSession?.email}</span> | Role: <span className="text-amber-400 uppercase font-semibold">{userSession?.role}</span>
-            </p>
-          </div>
-          
-          <div className="flex gap-2">
-            {userSession?.role === 'super_admin' ? (
-              <span className="text-xs bg-purple-950 text-purple-300 px-3 py-1 rounded-full border border-purple-500/30">
-                Global Control Active
-              </span>
-            ) : (
-              <span className="text-xs bg-emerald-950 text-emerald-300 px-3 py-1 rounded-full border border-emerald-500/30">
-                Currency: {userSession?.currency}
-              </span>
-            )}
-          </div>
-        </div>
+    <div className="p-6 max-w-4xl mx-auto bg-slate-900 text-white rounded-xl shadow-lg mt-10">
+      <h2 className="text-2xl font-bold mb-4 text-emerald-400">SJ 32Core ERP - AI Screen (Steve Gateway)</h2>
+      <p className="text-sm text-slate-400 mb-6">
+        Aap yahan koi bhi multi-intent query likh sakte hain jo aapke business data aur 32 universal engines ko securely query karegi.
+      </p>
 
-        {/* Chat / Command Log */}
-        <div className="flex-1 overflow-y-auto space-y-4 pr-2 mb-4">
-          {messages.map((msg, index) => (
-            <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] rounded-xl p-3.5 text-sm ${
-                msg.sender === 'user' 
-                  ? 'bg-blue-600 text-white rounded-br-none' 
-                  : msg.text.includes('Fallback Mode')
-                    ? 'bg-amber-950/70 border border-amber-500/40 text-amber-200 rounded-bl-none'
-                    : 'bg-slate-800 border border-slate-700 text-slate-200 rounded-bl-none'
-              }`}>
-                {msg.text}
-              </div>
-            </div>
-          ))}
-          {loading && (
-            <div className="flex justify-start">
-              <div className="bg-slate-800 border border-slate-700 text-slate-400 text-xs rounded-xl p-3 animate-pulse">
-                Universal engine validating email, parsing multi-intent query, and checking webhook availability...
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Text-Only Input Form (No File Upload, No Mic, No Camera) */}
-        <form onSubmit={handleSendMessage} className="flex gap-3 pt-3 border-t border-slate-800">
-          <input 
-            type="text" 
-            value={inputQuery}
-            onChange={(e) => setInputQuery(e.target.value)}
-            placeholder={userSession?.role === 'super_admin' ? "Type global system command..." : "Type multi-intent command in any language (e.g. show sales, stock, and reports)..."} 
-            className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 text-sm"
+      <form onSubmit={handleAISubmit} className="space-y-4">
+        <div>
+          <textarea
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder=" मिसाल के तौर पर: 'Mujhe pichle 7 din ki total sales aur resin art stock ki report do'..."
+            className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-emerald-500 text-white"
+            rows={4}
           />
-          <button 
-            type="submit"
-            disabled={loading}
-            className="bg-blue-600 hover:bg-blue-500 px-6 py-3 font-semibold rounded-xl transition duration-200 text-sm shadow-lg shadow-blue-600/20 disabled:opacity-50"
-          >
-            Send
-          </button>
-        </form>
-
-        <div className="mt-3 text-center text-[10px] text-slate-500">
-          Universal Email Routing | Zero Database Access for AI | Automated Webhook Fallback Engine
         </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 font-semibold rounded-lg transition-colors disabled:opacity-50"
+        >
+          {loading ? 'Processing with Steve...' : 'Ask Steve AI'}
+        </button>
+      </form>
 
-      </div>
-    </main>
+      {responseLog && (
+        <div className="mt-6 p-4 bg-slate-800 border border-slate-700 rounded-lg">
+          <h3 className="text-sm font-semibold text-emerald-300 mb-2">Webhook Response Log:</h3>
+          <pre className="text-xs text-slate-300 overflow-x-auto p-2 bg-slate-950 rounded">
+            {JSON.stringify(responseLog, null, 2)}
+          </pre>
+        </div>
+      )}
+    </div>
   );
-          }
+}
 

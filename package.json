@@ -1,5 +1,5 @@
 {
-  "name": "sj-32core-erp",
+  "name": "sj-32-core-erp",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,12 +9,14 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@supabase/auth-helpers-nextjs": "^0.8.7",
     "@supabase/supabase-js": "^2.39.0",
     "autoprefixer": "^10.0.1",
     "next": "^14.1.0",
     "postcss": "^8",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "tailwindcss": "^3.3.0",
-    "@supabase/auth-helpers-nextjs": "^0.8.7"
-  }
+    "tailwindcss": "^3.3.0"
+  },
+  "devDependencies": {}
+}

@@ -1,20 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export default function AIScreenComponent() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const [responseLog, setResponseLog] = useState(null);
+  const [messages, setMessages] = useState([
+    { sender: 'steve', text: 'Salam! Main Steve hoon, aapka 32Core ERP AI Agent. Aap mujh se apne business, inventory, ya sales ke baray mein kuch bhi pooch sakte hain.' }
+  ]);
+  const chatEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, loading]);
 
   const handleAISubmit = async (e) => {
     e.preventDefault();
-    if (!query.trim()) return;
+    if (!query.trim() || loading) return;
 
+    const userMsg = query;
+    setQuery('');
+    setMessages((prev) => [...prev, { sender: 'user', text: userMsg }]);
     setLoading(true);
+
     try {
-      // 1. Get current authenticated user session from Supabase
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError || !session) {
@@ -26,14 +40,12 @@ export default function AIScreenComponent() {
       const userEmail = session.user.email;
       const isSuperAdmin = userEmail === 'ja024478@gmail.com';
 
-      // 2. Fetch user profile / tenant mapping from Supabase database
-      const { data: profileData, error: profileError } = await supabase
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('tenant_id, role, staff_id')
         .eq('id', session.user.id)
         .single();
 
-      // 3. Build rich context payload for Steve (n8n Webhook)
       const userContext = {
         userId: session.user.id,
         email: userEmail,
@@ -48,12 +60,11 @@ export default function AIScreenComponent() {
         tenantId: userContext.tenantId,
         userContext: userContext,
         payload: {
-          userQuery: query,
+          userQuery: userMsg,
           timestamp: new Date().toISOString()
         }
       };
 
-      // 4. Send request to our backend webhook route (/api/webhook/steve)
       const res = await fetch('/api/webhook/steve', {
         method: 'POST',
         headers: {
@@ -64,50 +75,73 @@ export default function AIScreenComponent() {
       });
 
       const result = await res.json();
-      setResponseLog(result);
+      
+      // Extract response message or fallback to JSON string representation
+      const steveReply = result.message || result.reply || JSON.stringify(result, null, 2);
+
+      setMessages((prev) => [...prev, { sender: 'steve', text: steveReply }]);
 
     } catch (err) {
       console.error('AI Screen Error:', err);
-      setResponseLog({ success: false, error: err.message });
+      setMessages((prev) => [...prev, { sender: 'steve', text: `Error: ${err.message}` }]);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto bg-slate-900 text-white rounded-xl shadow-lg mt-10">
-      <h2 className="text-2xl font-bold mb-4 text-emerald-400">SJ 32Core ERP - AI Screen (Steve Gateway)</h2>
-      <p className="text-sm text-slate-400 mb-6">
-        Aap yahan koi bhi multi-intent query likh sakte hain jo aapke business data aur 32 universal engines ko securely query karegi.
-      </p>
+    <div className="flex flex-col h-screen max-w-4xl mx-auto bg-slate-900 text-white p-4">
+      {/* Header */}
+      <div className="py-4 border-b border-slate-800 mb-4">
+        <h2 className="text-xl font-bold text-emerald-400">SJ 32Core ERP - Steve AI Gateway</h2>
+        <p className="text-xs text-slate-400">Multi-Intent Enterprise Operating System Assistant</p>
+      </div>
 
-      <form onSubmit={handleAISubmit} className="space-y-4">
-        <div>
-          <textarea
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Misal ke taur par: 'Mujhe pichle 7 din ki total sales aur resin art stock ki report do'..."
-            className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-emerald-500 text-white"
-            rows={4}
-          />
-        </div>
+      {/* Chat Messages Area */}
+      <div className="flex-1 overflow-y-auto space-y-4 pr-2 mb-4">
+        {messages.map((msg, index) => (
+          <div
+            key={index}
+            className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`max-w-[85%] p-3.5 rounded-2xl text-sm leading-relaxed ${
+                msg.sender === 'user'
+                  ? 'bg-emerald-600 text-white rounded-br-none'
+                  : 'bg-slate-800 border border-slate-700 text-slate-200 rounded-bl-none shadow-md'
+              }`}
+            >
+              <p className="whitespace-pre-wrap">{msg.text}</p>
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div className="flex justify-start">
+            <div className="bg-slate-800 border border-slate-700 p-3.5 rounded-2xl text-sm text-slate-400 rounded-bl-none animate-pulse">
+              Steve is analyzing engines & processing query...
+            </div>
+          </div>
+        )}
+        <div ref={chatEndRef} />
+      </div>
+
+      {/* Input Form */}
+      <form onSubmit={handleAISubmit} className="flex gap-2 bg-slate-800 p-2 rounded-xl border border-slate-700">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Ask Steve anything (e.g. Sales report, Inventory stock)..."
+          className="flex-1 bg-transparent px-3 py-2 text-white focus:outline-none text-sm"
+        />
         <button
           type="submit"
           disabled={loading}
-          className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 font-semibold rounded-lg transition-colors disabled:opacity-50"
+          className="bg-emerald-600 hover:bg-emerald-500 px-5 py-2 rounded-lg font-semibold text-sm transition-colors disabled:opacity-50 text-white shadow"
         >
-          {loading ? 'Processing with Steve...' : 'Ask Steve AI'}
+          Send
         </button>
       </form>
-
-      {responseLog && (
-        <div className="mt-6 p-4 bg-slate-800 border border-slate-700 rounded-lg">
-          <h3 className="text-sm font-semibold text-emerald-300 mb-2">Webhook Response Log:</h3>
-          <pre className="text-xs text-slate-300 overflow-x-auto p-2 bg-slate-950 rounded">
-            {JSON.stringify(responseLog, null, 2)}
-          </pre>
-        </div>
-      )}
     </div>
   );
 }

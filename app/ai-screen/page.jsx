@@ -58,7 +58,6 @@ export default function AIScreenComponent() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Agar aapne webhook secret lagaya hai toh yahan pass kar sakte hain
           'Authorization': `Bearer ${process.env.NEXT_PUBLIC_STEVE_WEBHOOK_SECRET || ''}` 
         },
         body: JSON.stringify(webhookPayload)
@@ -87,7 +86,7 @@ export default function AIScreenComponent() {
           <textarea
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder=" मिसाल के तौर पर: 'Mujhe pichle 7 din ki total sales aur resin art stock ki report do'..."
+            placeholder="Misal ke taur par: 'Mujhe pichle 7 din ki total sales aur resin art stock ki report do'..."
             className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-emerald-500 text-white"
             rows={4}
           />
@@ -112,4 +111,5 @@ export default function AIScreenComponent() {
     </div>
   );
 }
+
 

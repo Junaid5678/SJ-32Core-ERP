@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-// SJ 32Core ERP - Robust Steve Webhook Listener with Safe Response Handling
+// SJ 32Core ERP - Ultimate Robust Steve Webhook Gateway
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -48,23 +48,26 @@ export async function POST(request) {
       })
     });
 
-    // Safely handle text or empty response from n8n to prevent JSON parsing crash
     const responseText = await n8nResponse.text();
-    let n8nData = {};
-    
+    let finalMessage = "Steve processed your request successfully.";
+
     try {
-      n8nData = responseText ? JSON.parse(responseText) : { message: "Steve processed your request successfully." };
-    } catch (parseError) {
-      n8nData = { message: responseText || "Steve processed your request successfully." };
+      const jsonParsed = JSON.parse(responseText);
+      // Try extracting reply, output, message, or any text field from n8n JSON
+      finalMessage = jsonParsed.reply || jsonParsed.output || jsonParsed.message || jsonParsed.text || JSON.stringify(jsonParsed);
+    } catch (e) {
+      // If it's plain text, use responseText directly
+      if (responseText && responseText.trim() !== "") {
+        finalMessage = responseText;
+      }
     }
 
-    // 4. Return formatted response back to the frontend chat UI
+    // 4. Return exact Steve response back to frontend
     return NextResponse.json({
       success: true,
       tenantId,
       userContext,
-      data: n8nData,
-      message: n8nData.message || n8nData.reply || n8nData.output || responseText || 'Steve successfully processed your query',
+      message: finalMessage,
       timestamp: new Date().toISOString()
     });
 
@@ -77,11 +80,10 @@ export async function POST(request) {
   }
 }
 
-// GET method to check if the webhook endpoint is online
 export async function GET() {
   return NextResponse.json({
     status: 'online',
-    system: 'SJ 32Core ERP - Steve AI Webhook Gateway with Safe Handling',
+    system: 'SJ 32Core ERP - Steve AI Webhook Gateway Active',
     timestamp: new Date().toISOString()
   });
 }

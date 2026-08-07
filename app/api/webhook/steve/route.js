@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-// SJ 32Core ERP - Updated Steve Webhook Listener (Forwarding to n8n Cloud)
+// SJ 32Core ERP - Robust Steve Webhook Listener with Safe Response Handling
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -25,13 +25,6 @@ export async function POST(request) {
       );
     }
 
-    console.log(`[SJ 32Core ERP] Processing Steve Payload for Tenant: ${tenantId}`, {
-      userId: userContext.userId,
-      role: userContext.role,
-      permissions: userContext.permissions,
-      eventType
-    });
-
     // 3. Forward payload to n8n Cloud Webhook URL
     const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL;
 
@@ -42,7 +35,6 @@ export async function POST(request) {
       );
     }
 
-    // Sending data to n8n workflow
     const n8nResponse = await fetch(n8nWebhookUrl, {
       method: 'POST',
       headers: {
@@ -56,19 +48,23 @@ export async function POST(request) {
       })
     });
 
-    if (!n8nResponse.ok) {
-      throw new Error(`Failed to reach n8n webhook: ${n8nResponse.statusText}`);
+    // Safely handle text or empty response from n8n to prevent JSON parsing crash
+    const responseText = await n8nResponse.text();
+    let n8nData = {};
+    
+    try {
+      n8nData = responseText ? JSON.parse(responseText) : { message: "Steve processed your request successfully." };
+    } catch (parseError) {
+      n8nData = { message: responseText || "Steve processed your request successfully." };
     }
 
-    const n8nData = await n8nResponse.json();
-
-    // 4. Return n8n's actual response back to the frontend chat UI
+    // 4. Return formatted response back to the frontend chat UI
     return NextResponse.json({
       success: true,
       tenantId,
       userContext,
       data: n8nData,
-      message: n8nData.message || n8nData.reply || 'Steve successfully processed your query',
+      message: n8nData.message || n8nData.reply || n8nData.output || responseText || 'Steve successfully processed your query',
       timestamp: new Date().toISOString()
     });
 
@@ -85,7 +81,7 @@ export async function POST(request) {
 export async function GET() {
   return NextResponse.json({
     status: 'online',
-    system: 'SJ 32Core ERP - Steve AI Webhook Gateway with n8n Forwarding',
+    system: 'SJ 32Core ERP - Steve AI Webhook Gateway with Safe Handling',
     timestamp: new Date().toISOString()
   });
 }

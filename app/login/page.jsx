@@ -24,7 +24,7 @@ export default function LoginPage() {
 
       if (error) throw error;
 
-      // Successful login, redirecting to the universal AI-Screen master component
+      router.refresh();
       router.push('/ai-screen');
     } catch (error) {
       setErrorMsg(error.message);

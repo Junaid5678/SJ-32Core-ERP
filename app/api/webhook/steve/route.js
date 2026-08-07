@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 
-// SJ 32Core ERP - Updated Steve Webhook Listener (Rich Context & Permission Enforcement)
+// SJ 32Core ERP - Updated Steve Webhook Listener (Forwarding to n8n Cloud)
 export async function POST(request) {
   try {
     const body = await request.json();
     const { eventType, tenantId, userContext, payload } = body;
 
-    // 1. Security Check: Verify secret header from n8n cloud
+    // 1. Security Check: Verify secret header
     const authHeader = request.headers.get('authorization');
     const secretKey = process.env.STEVE_WEBHOOK_SECRET;
 
@@ -32,24 +32,43 @@ export async function POST(request) {
       eventType
     });
 
-    // 3. Handle action based on event type
-    switch (eventType) {
-      case 'AI_PROCESS_RESPONSE':
-        // Here we handle the response returned by Steve, 
-        // ensuring userContext and permissions are preserved for the frontend UI.
-        break;
-      default:
-        console.log('Processed general event with context:', eventType);
+    // 3. Forward payload to n8n Cloud Webhook URL
+    const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL;
+
+    if (!n8nWebhookUrl) {
+      return NextResponse.json(
+        { success: false, error: 'N8N_WEBHOOK_URL is not configured in Vercel environment variables' },
+        { status: 500 }
+      );
     }
 
-    // Return the payload back along with the context so the frontend UI 
-    // can handle permission checks (e.g., showing "Permission Denied" if unauthorized)
+    // Sending data to n8n workflow
+    const n8nResponse = await fetch(n8nWebhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        eventType,
+        tenantId,
+        userContext,
+        payload
+      })
+    });
+
+    if (!n8nResponse.ok) {
+      throw new Error(`Failed to reach n8n webhook: ${n8nResponse.statusText}`);
+    }
+
+    const n8nData = await n8nResponse.json();
+
+    // 4. Return n8n's actual response back to the frontend chat UI
     return NextResponse.json({
       success: true,
       tenantId,
       userContext,
-      data: payload,
-      message: 'Webhook payload successfully processed with permission context',
+      data: n8nData,
+      message: n8nData.message || n8nData.reply || 'Steve successfully processed your query',
       timestamp: new Date().toISOString()
     });
 
@@ -66,7 +85,7 @@ export async function POST(request) {
 export async function GET() {
   return NextResponse.json({
     status: 'online',
-    system: 'SJ 32Core ERP - Steve AI Webhook Gateway with Context Enforcement',
+    system: 'SJ 32Core ERP - Steve AI Webhook Gateway with n8n Forwarding',
     timestamp: new Date().toISOString()
   });
 }

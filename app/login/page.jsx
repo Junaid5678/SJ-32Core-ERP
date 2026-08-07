@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
@@ -9,7 +8,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const router = useRouter();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -24,11 +22,10 @@ export default function LoginPage() {
 
       if (error) throw error;
 
-      router.refresh();
-      router.push('/ai-screen');
+      // Force full page redirection to ensure Supabase session cookies are picked up instantly
+      window.location.href = '/ai-screen';
     } catch (error) {
       setErrorMsg(error.message);
-    } finally {
       setLoading(false);
     }
   };

@@ -17,9 +17,9 @@ export default function UniversalMasterDashboard() {
         
         console.log("Supabase Auth User Object:", user);
         
-        const rawEmail = user?.email || 'ja024477@gmail.com'; 
+        const rawEmail = user?.email || 'ja024478@gmail.com'; 
         const currentLoggedInEmail = rawEmail.trim().toLowerCase();
-        const supremeSuperAdminEmail = 'ja024477@gmail.com'.trim().toLowerCase();
+        const supremeSuperAdminEmail = 'ja024478@gmail.com'.trim().toLowerCase();
 
         console.log("Comparing Logged-In Email:", currentLoggedInEmail, "with Super Admin:", supremeSuperAdminEmail);
 

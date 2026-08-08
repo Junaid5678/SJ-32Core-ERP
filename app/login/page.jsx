@@ -193,7 +193,7 @@ export default function LoginPage() {
           /* STAFF ID LOGIN FORM */
           <form onSubmit={handleStaffLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Human-Readable Staff ID</label>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Staff ID</label>
               <input
                 type="text"
                 required

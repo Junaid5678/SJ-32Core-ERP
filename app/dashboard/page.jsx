@@ -15,11 +15,15 @@ export default function UniversalMasterDashboard() {
       try {
         const { data: { user }, error } = await supabase.auth.getUser();
         
-        // Agar session se email mil jaye warna fallback testing ke liye aapka admin email
-        const currentLoggedInEmail = user?.email || 'ja024477@gmail.com'; 
-        const supremeSuperAdminEmail = 'ja024477@gmail.com';
+        console.log("Supabase Auth User Object:", user);
+        
+        const rawEmail = user?.email || 'ja024477@gmail.com'; 
+        const currentLoggedInEmail = rawEmail.trim().toLowerCase();
+        const supremeSuperAdminEmail = 'ja024477@gmail.com'.trim().toLowerCase();
 
-        if (currentLoggedInEmail.toLowerCase() === supremeSuperAdminEmail.toLowerCase()) {
+        console.log("Comparing Logged-In Email:", currentLoggedInEmail, "with Super Admin:", supremeSuperAdminEmail);
+
+        if (currentLoggedInEmail === supremeSuperAdminEmail) {
           // SUPREME SUPER ADMIN GLOBAL VIEW
           setUserProfile({
             email: currentLoggedInEmail,

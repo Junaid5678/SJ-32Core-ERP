@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export default function UniversalMasterDashboard() {
   const [loading, setLoading] = useState(true);
@@ -8,45 +9,56 @@ export default function UniversalMasterDashboard() {
   const [messages, setMessages] = useState([]);
   const [inputQuery, setInputQuery] = useState('');
 
-  // 1. UNIVERSAL EMAIL & ROLE ROUTING ENGINE
+  // 1. REAL-TIME SUPABASE SESSION & UNIVERSAL EMAIL ROUTING ENGINE
   useEffect(() => {
-    // In production, this pulls dynamically from Supabase Auth session: supabase.auth.getUser()
-    const currentLoggedInEmail = 'admin@sj32core.com'; // Change to test any user email
-    const supremeSuperAdminEmail = 'admin@sj32core.com';
+    async function fetchUserSession() {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        
+        // Agar session se email mil jaye warna fallback testing ke liye aapka admin email
+        const currentLoggedInEmail = user?.email || 'ja024477@gmail.com'; 
+        const supremeSuperAdminEmail = 'ja024477@gmail.com';
 
-    if (currentLoggedInEmail === supremeSuperAdminEmail) {
-      // SUPREME SUPER ADMIN GLOBAL VIEW
-      setUserProfile({
-        email: currentLoggedInEmail,
-        role: 'super_admin',
-        name: 'Supreme Platform Owner',
-        mode: 'global_control'
-      });
-      setMessages([
-        { 
-          sender: 'ai', 
-          text: 'SJ 32Core ERP Universal Master OS Active (Super Admin Mode). Managing all global tenants, subscription tiers (Trial, Starter, Business, Bronze, Silver, Gold, Enterprise), and AI token quotas across 32 universal engines.' 
+        if (currentLoggedInEmail.toLowerCase() === supremeSuperAdminEmail.toLowerCase()) {
+          // SUPREME SUPER ADMIN GLOBAL VIEW
+          setUserProfile({
+            email: currentLoggedInEmail,
+            role: 'super_admin',
+            name: 'Supreme Platform Owner',
+            mode: 'global_control'
+          });
+          setMessages([
+            { 
+              sender: 'ai', 
+              text: 'SJ 32Core ERP Universal Master OS Active (Super Admin Mode). Managing all global tenants, subscription tiers (Trial, Starter, Business, Bronze, Silver, Gold, Enterprise), and AI token quotas across 32 universal engines.' 
+            }
+          ]);
+        } else {
+          // UNIVERSAL BUSINESS OWNER VIEW (Supports any business type worldwide: Resin Art, Retail, Restaurant, etc.)
+          setUserProfile({
+            email: currentLoggedInEmail,
+            role: 'company_owner',
+            businessName: 'SJ Craft Global Enterprises',
+            businessType: 'Universal Multi-Branch OS',
+            currency: 'PKR', // Dynamically adapts to USD, EUR, AED, etc.
+            language: 'en',  // Universal multi-language support
+            mode: 'tenant_os'
+          });
+          setMessages([
+            { 
+              sender: 'ai', 
+              text: 'SJ 32Core ERP Universal Business OS Active. Type complex multi-intent commands in any language (e.g., "Show sales, check inventory stock, and staff report").' 
+            }
+          ]);
         }
-      ]);
-    } else {
-      // UNIVERSAL BUSINESS OWNER VIEW (Supports any business type worldwide: Resin Art, Retail, Restaurant, etc.)
-      setUserProfile({
-        email: currentLoggedInEmail,
-        role: 'company_owner',
-        businessName: 'SJ Craft Global Enterprises',
-        businessType: 'Universal Multi-Branch OS',
-        currency: 'PKR', // Dynamically adapts to USD, EUR, AED, etc.
-        language: 'en',  // Universal multi-language support
-        mode: 'tenant_os'
-      });
-      setMessages([
-        { 
-          sender: 'ai', 
-          text: 'SJ 32Core ERP Universal Business OS Active. Type complex multi-intent commands in any language (e.g., "Show sales, check inventory stock, and staff report").' 
-        }
-      ]);
+      } catch (err) {
+        console.error('Session fetch error:', err.message);
+      } finally {
+        setLoading(false);
+      }
     }
-    setLoading(false);
+
+    fetchUserSession();
   }, []);
 
   // 2. UNIVERSAL COMMAND EXECUTOR & MULTI-INTENT PARSER
@@ -142,28 +154,28 @@ export default function UniversalMasterDashboard() {
         <div className="pb-4 border-b border-slate-800 mb-4 flex justify-between items-center">
           <div>
             <h1 className="text-lg font-bold tracking-tight text-blue-400">
-              {userProfile.role === 'super_admin' ? 'SJ 32Core ERP - Global Master Control' : `SJ 32Core ERP - ${userProfile.businessName}`}
+              {userProfile?.role === 'super_admin' ? 'SJ 32Core ERP - Global Master Control' : `SJ 32Core ERP - ${userProfile?.businessName}`}
             </h1>
             <p className="text-[11px] text-slate-400">
-              User Email: <span className="text-blue-300">{userProfile.email}</span> | System Mode: <span className="text-amber-400 uppercase font-semibold">{userProfile.mode}</span>
+              User Email: <span className="text-blue-300">{userProfile?.email}</span> | System Mode: <span className="text-amber-400 uppercase font-semibold">{userProfile?.mode}</span>
             </p>
           </div>
           
           <div className="flex gap-2">
-            {userProfile.role === 'super_admin' ? (
+            {userProfile?.role === 'super_admin' ? (
               <span className="text-xs bg-purple-950 text-purple-300 px-3 py-1 rounded-full border border-purple-500/30">
                 All 32 Engines Managed
               </span>
             ) : (
               <span className="text-xs bg-emerald-950 text-emerald-300 px-3 py-1 rounded-full border border-emerald-500/30">
-                Currency: {userProfile.currency} | Multi-Lang Active
+                Currency: {userProfile?.currency} | Multi-Lang Active
               </span>
             )}
           </div>
         </div>
 
         {/* Super Admin Quick Stats Bar (Only renders if super admin logs in) */}
-        {userProfile.role === 'super_admin' && (
+        {userProfile?.role === 'super_admin' && (
           <div className="grid grid-cols-4 gap-3 mb-4">
             <div className="bg-slate-950 border border-slate-800 p-3 rounded-xl text-center">
               <p className="text-[10px] text-slate-400 uppercase">Total Active Companies</p>
@@ -206,13 +218,13 @@ export default function UniversalMasterDashboard() {
           )}
         </div>
 
-        {/* Universal Text-Only Input Box (Supports all business commands) */}
+        {/* Universal Text-Only Input Box */}
         <form onSubmit={handleUniversalCommand} className="flex gap-3 pt-3 border-t border-slate-800">
           <input 
             type="text" 
             value={inputQuery}
             onChange={(e) => setInputQuery(e.target.value)}
-            placeholder={userProfile.role === 'super_admin' ? "Type global control command..." : "Type multi-intent command (e.g., show sales, stock inventory, and khata ledger)..."} 
+            placeholder={userProfile?.role === 'super_admin' ? "Type global control command..." : "Type multi-intent command (e.g., show sales, stock inventory, and khata ledger)..."} 
             className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 text-sm"
           />
           <button 
@@ -231,5 +243,4 @@ export default function UniversalMasterDashboard() {
       </div>
     </main>
   );
-                                            }
-          
+}

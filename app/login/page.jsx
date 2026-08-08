@@ -33,7 +33,7 @@ export default function LoginPage() {
         if (authError) throw authError;
 
         // Check if Super Admin email
-        const role = email === 'ja024477@gmail.com' ? 'super_admin' : 'company_owner';
+        const role = email === 'ja024478@gmail.com' ? 'super_admin' : 'company_owner';
 
         // 2. Create Tenant & Profile entry can be handled or redirected to subscription
         if (role === 'super_admin') {
@@ -50,7 +50,7 @@ export default function LoginPage() {
         if (error) throw error;
 
         // Check role or redirect to dashboard
-        if (email === 'ja024477@gmail.com') {
+        if (email === 'ja024478@gmail.com') {
           router.push('/dashboard');
         } else {
           router.push('/dashboard');

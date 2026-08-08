@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import PosOrdersEngine from './PosOrdersEngine';
 import AccountingLedgerEngine from './AccountingLedgerEngine';
+import RbacStaffEngine from './RbacStaffEngine';
 
 
 export default function UniversalMasterDashboard() {
@@ -207,6 +208,8 @@ export default function UniversalMasterDashboard() {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
             <PosOrdersEngine userEmail={userProfile?.email} />
             <AccountingLedgerEngine userEmail={userProfile?.email} />
+            <RbacStaffEngine userEmail={userProfile?.email} />
+            
       
             <div className="flex justify-between items-center mb-6">
               <div>

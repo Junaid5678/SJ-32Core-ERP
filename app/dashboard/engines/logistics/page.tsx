@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import EngineShell from '../_engineShell';
 import { supabase } from '../../../../src/lib/supabaseClient';

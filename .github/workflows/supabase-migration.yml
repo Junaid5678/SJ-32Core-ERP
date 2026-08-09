@@ -21,6 +21,23 @@ jobs:
         with:
           version: latest
 
+      - name: Sanitize .env.local to avoid Supabase parse errors
+        run: |
+          if [ -f .env.local ]; then
+            # remove UTF-8 BOM if present
+            sed -i '1s/^\xEF\xBB\xBF//' .env.local || true
+            # normalize CRLF -> LF
+            sed -i 's/\r$//' .env.local || true
+
+            # if any line is not KEY=VALUE, rename the file so CLI won't parse it
+            if grep -n -vE '^[A-Za-z_][A-Za-z0-9_]*=.*$' .env.local >/dev/null 2>&1; then
+              echo "Malformed .env.local detected: renaming to .env.local.bak to avoid parsing errors"
+              mv .env.local .env.local.bak
+            else
+              echo ".env.local looks OK"
+            fi
+          fi
+
       - name: Link Supabase project
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

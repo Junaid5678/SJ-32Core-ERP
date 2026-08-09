@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { isSuperAdminByEmail } from '@/lib/admin';
 
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { email } = body;
+
+    if (!email || !isSuperAdminByEmail(email)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 export async function POST(request) {
   try {
     const body = await request.json();

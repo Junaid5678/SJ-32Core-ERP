@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import PosOrdersEngine from './PosOrdersEngine';
 import AccountingLedgerEngine from './AccountingLedgerEngine';
 import RbacStaffEngine from './RbacStaffEngine';
-
+import { getEnabledEnginesForTenant } from '@/lib/subscriptions';
 
 export default function UniversalMasterDashboard() {
   const [loading, setLoading] = useState(true);
@@ -20,6 +20,7 @@ export default function UniversalMasterDashboard() {
   const [newStock, setNewStock] = useState('');
   const [newUnit, setNewUnit] = useState('pcs');
   const [newPrice, setNewPrice] = useState('');
+  const [enabledEngines, setEnabledEngines] = useState([]);
 
   // 1. REAL-TIME SUPABASE SESSION & UNIVERSAL EMAIL ROUTING ENGINE
   useEffect(() => {
@@ -66,8 +67,12 @@ export default function UniversalMasterDashboard() {
           // Fetch inventory items for this tenant
           fetchTenantInventory(currentLoggedInEmail);
         }
+
+        // fetch enabled engines for tenant (will return defaults when none)
+        const engines = await getEnabledEnginesForTenant(currentLoggedInEmail);
+        setEnabledEngines(engines || []);
       } catch (err) {
-        console.error('Session fetch error:', err.message);
+        console.error('Session fetch error:', err?.message ?? err);
       } finally {
         setLoading(false);
       }
@@ -88,7 +93,7 @@ export default function UniversalMasterDashboard() {
       if (error) throw error;
       setInventory(data || []);
     } catch (err) {
-      console.error('Error fetching inventory:', err.message);
+      console.error('Error fetching inventory:', err?.message ?? err);
     } finally {
       setInventoryLoading(false);
     }
@@ -123,7 +128,7 @@ export default function UniversalMasterDashboard() {
         setNewPrice('');
       }
     } catch (err) {
-      alert('Error adding item: ' + err.message);
+      alert('Error adding item: ' + (err?.message ?? err));
     }
   };
 
@@ -153,11 +158,12 @@ export default function UniversalMasterDashboard() {
     return <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center font-mono">Initializing SJ 32Core Universal OS...</div>;
   }
 
+  const canShow = (slug) => enabledEngines.length === 0 || enabledEngines.includes(slug);
+
   return (
     <main className="min-h-screen bg-slate-950 flex flex-col items-center p-4 text-white">
       <div className="max-w-5xl w-full space-y-6">
         
-        {/* Universal Dynamic Header */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex justify-between items-center">
           <div>
             <h1 className="text-xl font-bold tracking-tight text-indigo-400">
@@ -167,7 +173,7 @@ export default function UniversalMasterDashboard() {
               User Email: <span className="text-indigo-300">{userProfile?.email}</span> | Mode: <span className="text-amber-400 uppercase font-semibold">{userProfile?.mode}</span>
             </p>
           </div>
-          
+
           <div>
             {userProfile?.role === 'super_admin' ? (
               <span className="text-xs bg-purple-950 text-purple-300 px-3 py-1.5 rounded-full border border-purple-500/30">
@@ -181,7 +187,6 @@ export default function UniversalMasterDashboard() {
           </div>
         </div>
 
-        {/* Super Admin Quick Stats Bar */}
         {userProfile?.role === 'super_admin' && (
           <div className="grid grid-cols-4 gap-4">
             <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl text-center">
@@ -203,14 +208,12 @@ export default function UniversalMasterDashboard() {
           </div>
         )}
 
-        {/* Company Owner View: Inventory & BOM Engine Module */}
         {userProfile?.role === 'company_owner' && (
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-            <PosOrdersEngine userEmail={userProfile?.email} />
-            <AccountingLedgerEngine userEmail={userProfile?.email} />
-            <RbacStaffEngine userEmail={userProfile?.email} />
-            
-      
+            {canShow('pos') && <PosOrdersEngine userEmail={userProfile?.email} />}
+            {canShow('accounting') && <AccountingLedgerEngine userEmail={userProfile?.email} />}
+            {canShow('rbac') && <RbacStaffEngine userEmail={userProfile?.email} />}
+
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h2 className="text-base font-bold text-indigo-400">Inventory & BOM Engine</h2>
@@ -221,7 +224,6 @@ export default function UniversalMasterDashboard() {
               </span>
             </div>
 
-            {/* Add Item Form */}
             <form onSubmit={handleAddInventoryItem} className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6 bg-slate-950 p-4 rounded-xl border border-slate-800">
               <input
                 type="text"
@@ -265,7 +267,6 @@ export default function UniversalMasterDashboard() {
               </button>
             </form>
 
-            {/* Inventory Table */}
             {inventoryLoading ? (
               <div className="text-xs text-slate-400 animate-pulse text-center py-4">Loading inventory...</div>
             ) : inventory.length === 0 ? (
@@ -303,7 +304,6 @@ export default function UniversalMasterDashboard() {
           </div>
         )}
 
-        {/* Universal Chat & Command Interface */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col h-[40vh]">
           <h3 className="text-sm font-bold text-indigo-400 mb-3">Universal AI Command & Assistant</h3>
           
@@ -341,5 +341,4 @@ export default function UniversalMasterDashboard() {
       </div>
     </main>
   );
-              }
-            
+}

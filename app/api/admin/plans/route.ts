@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { isSuperAdminByEmail } from '@/lib/admin';
 
 export async function POST(request) {

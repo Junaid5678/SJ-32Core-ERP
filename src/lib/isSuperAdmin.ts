@@ -1,5 +1,5 @@
-const isSuperAdmin = userEmail
-  ? (userEmail.trim().toLowerCase() === 'ja024478@gmail.com' || userEmail.endsWith('@yourdomain.com'))
-  : false;
-
-export default isSuperAdmin;
+export default function isSuperAdminEmail(userEmail?: string | null) {
+  if (!userEmail) return false;
+  const e = userEmail.trim().toLowerCase();
+  return e === 'ja024478@gmail.com' || e.endsWith('@yourdomain.com');
+}

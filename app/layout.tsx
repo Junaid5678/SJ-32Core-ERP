@@ -1,6 +1,7 @@
 import './globals.css'
 import React from 'react'
 import { getUserEmailFromSession } from '../src/lib/tenant'
+import isSuperAdminEmail from '@/lib/isSuperAdmin'
 import ThemeProvider from './providers/ThemeProvider'
 import ThemeToggle from './components/ThemeToggle'
 
@@ -18,7 +19,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     // silently ignore — unauthenticated
   }
 
-  const isSuperAdmin = userEmail?.trim().toLowerCase() === 'ja024478@gmail.com' || userEmail?.endsWith('@yourdomain.com') ?? false;
+  const isSuperAdmin = isSuperAdminEmail(userEmail);
 
   return (
     <html lang="en" className="dark">

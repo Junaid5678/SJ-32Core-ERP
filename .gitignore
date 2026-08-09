@@ -1,0 +1,11 @@
+# Node / Next standard ignores
+node_modules/
+.next/
+.env.local
+.DS_Store
+/build
+/dist
+
+# Optional local editor files
+.vscode/
+*.log

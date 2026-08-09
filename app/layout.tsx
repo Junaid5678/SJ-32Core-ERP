@@ -1,6 +1,6 @@
 import './globals.css'
 import React from 'react'
-import { getUserEmailFromSession } from '../src/lib/tenant'
+import { getUserEmailFromSession } from '@/lib/tenant'
 import isSuperAdminEmail from '@/lib/isSuperAdmin'
 import ThemeProvider from './providers/ThemeProvider'
 import ThemeToggle from './components/ThemeToggle'

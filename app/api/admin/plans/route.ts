@@ -1,16 +1,9 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseServer } from '@/lib/supabaseServerClient';
 import { isSuperAdminByEmail } from '@/lib/admin';
 
+// Create subscription plan
 export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const { email } = body;
-
-    if (!email || !isSuperAdminByEmail(email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-export async function POST(request) {
   try {
     const body = await request.json();
     const { adminEmail, name, price, ai_tokens, enabled_engines } = body;
@@ -19,7 +12,11 @@ export async function POST(request) {
     const ok = await isSuperAdminByEmail(adminEmail);
     if (!ok) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
-    const { data, error } = await supabaseServer.from('subscription_plans').insert([{ name, price, ai_tokens, enabled_engines }]).select();
+    const { data, error } = await supabaseServer
+      .from('subscription_plans')
+      .insert([{ name, price, ai_tokens, enabled_engines }])
+      .select();
+
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ data }, { status: 201 });
   } catch (e) {
@@ -27,11 +24,13 @@ export async function POST(request) {
   }
 }
 
-export async function PUT(request) {
+// Update subscription plan
+export async function PUT(request: Request) {
   try {
     const body = await request.json();
     const { adminEmail, id, ...rest } = body;
     if (!adminEmail) return NextResponse.json({ error: 'adminEmail required' }, { status: 400 });
+
     const ok = await isSuperAdminByEmail(adminEmail);
     if (!ok) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
@@ -44,11 +43,13 @@ export async function PUT(request) {
   }
 }
 
-export async function DELETE(request) {
+// Delete subscription plan
+export async function DELETE(request: Request) {
   try {
     const body = await request.json();
     const { adminEmail, id } = body;
     if (!adminEmail) return NextResponse.json({ error: 'adminEmail required' }, { status: 400 });
+
     const ok = await isSuperAdminByEmail(adminEmail);
     if (!ok) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });

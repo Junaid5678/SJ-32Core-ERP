@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import ThemeProvider from "@/components/ThemeToggle";
-import EngineShell from "@/app/_engineShell";
-import "@/styles/globals.css";
+import ThemeProvider from "../src/components/ThemeToggle";
+import EngineShell from "./_engineShell";
+import "../src/styles/globals.css";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

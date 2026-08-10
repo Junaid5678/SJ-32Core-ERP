@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Sidebar from "@/components/Sidebar";
+import Sidebar from "../src/components/Sidebar";
 
 export default function EngineShell({ children }: { children: React.ReactNode }) {
   return (

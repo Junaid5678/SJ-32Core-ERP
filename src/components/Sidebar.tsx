@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { getPermissionsForRole } from "@/lib/rbac";
+import { getPermissionsForRole } from "../lib/rbac";
 
 const MODULES = [
   { key: "ledger", label: "Ledger & Accounts", route: "/ledger", perm: "ledger.access" },

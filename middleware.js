@@ -2,49 +2,42 @@ import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 import { NextResponse } from 'next/server';
 
 // Supreme Super Admin Email List
-const SUPER_ADMIN_EMAILS = ['ja024478@gmail.com']; 
+const SUPER_ADMIN_EMAILS = ['ja024478@gmail.com'];
 
 export async function middleware(req) {
   const res = NextResponse.next();
   const supabase = createMiddlewareClient({ req, res });
 
-  // Session check
+  // Get session
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
   const { pathname } = req.nextUrl;
 
-  // 1. Agar user login nahi hai aur public page (jaise /login) par nahi hai, toh login par bhej do
-  if (!session && pathname !== '/login') {
+  // Public pages: allow
+  const PUBLIC_PATHS = ['/', '/login', '/signup', '/api', '/favicon.ico', '/_next'];
+  if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p))) {
+    // If user already logged-in and hits /login, redirect to proper dashboard
+    if (session && pathname === '/login') {
+      const userEmail = session.user?.email ?? '';
+      const isSuperAdmin = SUPER_ADMIN_EMAILS.includes(userEmail);
+      const destination = isSuperAdmin ? '/dashboard/admin' : '/dashboard';
+      return NextResponse.redirect(new URL(destination, req.url));
+    }
+    return res;
+  }
+
+  // Require auth for everything under /dashboard or app-protected routes
+  if (!session) {
     return NextResponse.redirect(new URL('/login', req.url));
   }
 
-  // 2. Agar user login hai aur login page par jana chahta hai, toh dashboard par bhej do
-  if (session && pathname === '/login') {
-    return NextResponse.redirect(new URL('/dashboard', req.url));
-  }
-
-  // 3. Super Admin & Tenant Authorization Logic
-  if (session) {
-    const userEmail = session.user.email;
-    const isSuperAdmin = SUPER_ADMIN_EMAILS.includes(userEmail);
-
-    if (isSuperAdmin) {
-      // Aap Supreme Super Admin hain, aapko har jagah access milega
-      return res;
-    } else {
-      // Yeh logic future mein tenant-based routing ke liye use hogi
-      // Filhal normal business owners ke liye
-      return res;
-    }
-  }
-
+  // For authenticated sessions: allow access. If you want additional tenant checks,
+  // call DB here (using createMiddlewareClient) to confirm user role/tenant belongs to requested path.
   return res;
 }
 
-// Routes jin par middleware apply hoga
 export const config = {
-  matcher: ['/dashboard/:path*', '/ai-screen/:path*', '/((?!api|_next/static|_next/image|favicon.ico|login).*)'],
+  matcher: ['/dashboard/:path*', '/ai-screen/:path*'],
 };
-

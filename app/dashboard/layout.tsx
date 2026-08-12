@@ -1,43 +1,39 @@
-"use client";
+// Server component (Next.js app router)
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import Sidebar from '../../components/Sidebar';
+import AskSteve from '../../components/AskSteve';
 
-import React, { useEffect, useState } from 'react';
-import EngineShell from '../_engineShell';
-import { supabase } from '../../src/lib/supabaseClient';
-import { useRouter } from 'next/navigation';
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const supabase = createServerComponentClient({ cookies });
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
+  // If no session, return children (middleware should have redirected unauthenticated users)
+  if (!session) {
+    return <>{children}</>;
+  }
 
-  useEffect(() => {
-    let mounted = true;
-    // verify session; if not present, redirect to /login
-    async function check() {
-      try {
-        const { data } = await supabase.auth.getSession();
-        const session = data.session;
-        if (!session) {
-          router.push('/login');
-          return;
-        }
-        if (mounted) setLoading(false);
-      } catch (e) {
-        router.push('/login');
-      }
-    }
-    check();
+  const userEmail = session.user?.email ?? '';
 
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) router.push('/login');
-    });
+  // Fetch subscription & roles (server-side). Query public schema explicitly.
+  const { data: subs } = await supabase.from('public.subscriptions').select('plan,status,starts_at,ends_at').eq('tenant_email', userEmail).limit(1);
+  const subscription = subs?.[0] ?? null;
 
-    return () => {
-      mounted = false;
-      try { listener?.subscription.unsubscribe(); } catch (e) {}
-    };
-  }, [router]);
+  // Fetch user roles
+  const { data: roles } = await supabase.from('public.user_roles').select('role_id').eq('user_email', userEmail);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading dashboard...</div>;
+  // Determine engines accessible by subscription and roles (simple mapping)
+  const allowedEngines = subscription?.plan === 'enterprise' ? 'all' : 'standard';
 
-  return <EngineShell>{children}</EngineShell>;
+  return (
+    <div className="flex min-h-screen">
+      <Sidebar allowedEngines={allowedEngines} />
+      <div className="flex-1 relative">
+        {children}
+        <AskSteve />
+      </div>
+    </div>
+  );
 }
